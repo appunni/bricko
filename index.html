@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Bricko - 3D LEGO Builder</title>
+    <style>
+        body { margin: 0; overflow: hidden; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #canvas-container { width: 100vw; height: 100vh; display: block; }
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; width: 260px;
+            background: rgba(255, 255, 255, 0.95); padding: 20px;
+            border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px); user-select: none;
+            max-height: 90vh; overflow-y: auto;
+        }
+        h1 { margin: 0 0 15px 0; font-size: 24px; color: #333; display: flex; align-items: center; gap: 10px; }
+        .section-title { font-size: 12px; text-transform: uppercase; color: #666; margin-top: 20px; margin-bottom: 10px; letter-spacing: 1px; font-weight: 600; }
+        .color-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+        .color-btn {
+            width: 100%; aspect-ratio: 1; border-radius: 50%; border: 2px solid transparent;
+            cursor: pointer; transition: transform 0.2s, border-color 0.2s;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        .color-btn:hover { transform: scale(1.1); }
+        .color-btn.active { border-color: #333; transform: scale(1.1); }
+        
+        .brick-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .brick-btn {
+            padding: 10px; background: #f0f0f0; border: 2px solid transparent;
+            border-radius: 8px; cursor: pointer; text-align: center; font-size: 14px;
+            transition: all 0.2s; color: #444;
+        }
+        .brick-btn:hover { background: #e0e0e0; }
+        .brick-btn.active { border-color: #007bff; background: #eef7ff; color: #007bff; font-weight: 600; }
+        
+        #clear-btn {
+            width: 100%; padding: 12px; margin-top: 25px;
+            background: #ff4444; color: white; border: none; border-radius: 8px;
+            font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+        #clear-btn:hover { background: #cc0000; }
+        
+        .controls-hint { margin-top: 20px; font-size: 12px; color: #888; line-height: 1.5; border-top: 1px solid #eee; padding-top: 15px; }
+        .key { display: inline-block; padding: 2px 6px; background: #eee; border-radius: 4px; font-family: monospace; }
+    </style>
+    <!-- Import maps polyfill -->
+    <script async src="https://unpkg.com/es-module-shims@1.6.3/dist/es-module-shims.js"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+          "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+        }
+      }
+    </script>
+</head>
+<body>
+    <div id="ui-panel">
+        <h1>🧱 Bricko</h1>
+        
+        <div class="section-title">Colors</div>
+        <div class="color-grid" id="color-palette"></div>
+
+        <div class="section-title">Bricks</div>
+        <div class="brick-grid" id="brick-palette"></div>
+
+        <button id="clear-btn">Clear All Bricks</button>
+
+        <div class="controls-hint">
+            <div>🖱️ <b>Left Click</b>: Place Brick</div>
+            <div>🖱️ <b>Right Click</b>: Remove Brick</div>
+            <div>🖱️ <b>Left Drag</b>: Rotate View</div>
+            <div>🖱️ <b>Right Drag</b>: Pan View</div>
+            <div>🖱️ <b>Scroll</b>: Zoom</div>
+        </div>
+    </div>
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+        // --- Configuration ---
+        const CONFIG = {
+            gridSize: 32,
+            unitSize: 10, // 1 stud width
+            brickHeight: 12, // Standard brick height
+            plateHeight: 4,  // Plate height
+            studRadius: 2.4,
+            studHeight: 1.6,
+            colors: [
+                { name: 'Red', hex: 0xC91A09 },
+                { name: 'Blue', hex: 0x0055BF },
+                { name: 'Yellow', hex: 0xF2CD37 },
+                { name: 'Green', hex: 0x237841 },
+                { name: 'White', hex: 0xFFFFFF },
+                { name: 'Black', hex: 0x05131D },
+                { name: 'Orange', hex: 0xFE8A18 },
+                { name: 'Lime', hex: 0xBBE90B },
+                { name: 'Dark Blue', hex: 0x0A3463 },
+                { name: 'Bright Lt Yellow', hex: 0xF8F184 }, // Cool Yellow
+                { name: 'Tan', hex: 0xE4CD9E },
+                { name: 'Dark Tan', hex: 0x958A73 }
+            ],
+            bricks: [
+                { label: '1x1 Brick', w: 1, d: 1, h: 'brick' },
+                { label: '1x2 Brick', w: 1, d: 2, h: 'brick' },
+                { label: '1x4 Brick', w: 1, d: 4, h: 'brick' },
+                { label: '2x2 Brick', w: 2, d: 2, h: 'brick' },
+                { label: '2x3 Brick', w: 2, d: 3, h: 'brick' },
+                { label: '2x4 Brick', w: 2, d: 4, h: 'brick' },
+                { label: '1x1 Plate', w: 1, d: 1, h: 'plate' },
+                { label: '2x2 Plate', w: 2, d: 2, h: 'plate' },
+                { label: '2x4 Plate', w: 2, d: 4, h: 'plate' }
+            ]
+        };
+
+        let state = {
+            color: CONFIG.colors[0].hex,
+            brickType: CONFIG.bricks[0],
+            bricks: [] // Array of mesh objects
+        };
+
+        // --- Scene Setup ---
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xf0f5f9);
+        // Fog for depth
+        scene.fog = new THREE.Fog(0xf0f5f9, 200, 1000);
+
+        const aspect = window.innerWidth / window.innerHeight;
+        const d = 200;
+        const camera = new THREE.OrthographicCamera(-d * aspect, d * aspect, d, -d, 1, 2000);
+        camera.position.set(200, 200, 200);
+        camera.lookAt(0, 0, 0);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1; // Don't go below ground
+        controls.minZoom = 0.5;
+        controls.maxZoom = 3;
+
+        // --- Lighting ---
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(100, 200, 100);
+        dirLight.castShadow = true;
+        dirLight.shadow.mapSize.width = 2048;
+        dirLight.shadow.mapSize.height = 2048;
+        dirLight.shadow.camera.near = 0.5;
+        dirLight.shadow.camera.far = 500;
+        const shadowSize = 250;
+        dirLight.shadow.camera.left = -shadowSize;
+        dirLight.shadow.camera.right = shadowSize;
+        dirLight.shadow.camera.top = shadowSize;
+        dirLight.shadow.camera.bottom = -shadowSize;
+        scene.add(dirLight);
+
+        // --- Baseplate ---
+        const baseGroup = new THREE.Group();
+        scene.add(baseGroup);
+
+        // Green base geometry
+        const baseSize = CONFIG.gridSize * CONFIG.unitSize;
+        const baseGeo = new THREE.BoxGeometry(baseSize, 2, baseSize);
+        const baseMat = new THREE.MeshStandardMaterial({ color: 0x237841, roughness: 0.8 });
+        const basePlate = new THREE.Mesh(baseGeo, baseMat);
+        basePlate.position.y = -1;
+        basePlate.receiveShadow = true;
+        basePlate.userData.isBaseplate = true;
+        baseGroup.add(basePlate);
+
+        // Base studs
+        const studGeo = new THREE.CylinderGeometry(CONFIG.studRadius, CONFIG.studRadius, CONFIG.studHeight, 16);
+        const studMat = new THREE.MeshStandardMaterial({ color: 0x237841, roughness: 0.8 });
+        const instancedStuds = new THREE.InstancedMesh(studGeo, studMat, CONFIG.gridSize * CONFIG.gridSize);
+        instancedStuds.receiveShadow = true;
+        instancedStuds.castShadow = true;
+        
+        let idx = 0;
+        const dummy = new THREE.Object3D();
+        const offset = (CONFIG.gridSize * CONFIG.unitSize) / 2 - (CONFIG.unitSize / 2);
+        
+        for (let x = 0; x < CONFIG.gridSize; x++) {
+            for (let z = 0; z < CONFIG.gridSize; z++) {
+                dummy.position.set(
+                    x * CONFIG.unitSize - offset,
+                    CONFIG.studHeight / 2,
+                    z * CONFIG.unitSize - offset
+                );
+                dummy.updateMatrix();
+                instancedStuds.setMatrixAt(idx++, dummy.matrix);
+            }
+        }
+        baseGroup.add(instancedStuds);
+
+        // --- Brick Factory ---
+        const geometryCache = new Map();
+
+        function createBrickMesh(widthUnits, depthUnits, heightType, colorHex) {
+            const key = `${widthUnits}-${depthUnits}-${heightType}`;
+            let geometry = geometryCache.get(key);
+
+            const height = heightType === 'brick' ? CONFIG.brickHeight : CONFIG.plateHeight;
+
+            // Re-implementing geometry creation with BufferGeometryUtils is cleaner.
+            // But to be safe and robust without loading too many modules, let's use a Group.
+            // It makes "removing" the brick slightly more complex (need to find the root group), but it's fine.
+            
+            const group = new THREE.Group();
+            
+            // Material
+            const material = new THREE.MeshStandardMaterial({ 
+                color: colorHex, 
+                roughness: 0.2, 
+                metalness: 0.1 
+            });
+
+            const brickWidth = widthUnits * CONFIG.unitSize;
+            const brickDepth = depthUnits * CONFIG.unitSize;
+            
+            // Body
+            const bodyGeo = new RoundedBoxGeometry(brickWidth - 0.2, height, brickDepth - 0.2, 4, 1);
+            bodyGeo.translate(0, height / 2, 0);
+            const body = new THREE.Mesh(bodyGeo, material);
+            body.castShadow = true;
+            body.receiveShadow = true;
+            group.add(body);
+
+            // Studs
+            const studGeo = new THREE.CylinderGeometry(CONFIG.studRadius, CONFIG.studRadius, CONFIG.studHeight, 16);
+            studGeo.translate(0, height + CONFIG.studHeight/2, 0);
+            
+            const startX = -(brickWidth / 2) + (CONFIG.unitSize / 2);
+            const startZ = -(brickDepth / 2) + (CONFIG.unitSize / 2);
+
+            for(let x=0; x<widthUnits; x++) {
+                for(let z=0; z<depthUnits; z++) {
+                    const s = new THREE.Mesh(studGeo, material);
+                    s.position.x = startX + (x * CONFIG.unitSize);
+                    s.position.z = startZ + (z * CONFIG.unitSize);
+                    s.castShadow = true;
+                    s.receiveShadow = true;
+                    group.add(s);
+                }
+            }
+            
+            // Metadata for logic
+            group.userData = {
+                isBrick: true,
+                w: widthUnits,
+                d: depthUnits,
+                h: height,
+                type: heightType
+            };
+            
+            return group;
+        }
+
+        // --- Interaction ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2();
+        let ghostBrick = null;
+
+        // Helper to update ghost
+        function updateGhost() {
+            if(ghostBrick) {
+                scene.remove(ghostBrick);
+                ghostBrick = null;
+            }
+            
+            const mesh = createBrickMesh(state.brickType.w, state.brickType.d, state.brickType.h, state.color);
+            
+            // Make transparent
+            mesh.children.forEach(c => {
+                c.material = c.material.clone();
+                c.material.transparent = true;
+                c.material.opacity = 0.5;
+                c.material.emissive = new THREE.Color(state.color);
+                c.material.emissiveIntensity = 0.2;
+            });
+            
+            ghostBrick = mesh;
+            ghostBrick.visible = false; // Hide initially
+            scene.add(ghostBrick);
+        }
+        
+        updateGhost(); // Initial ghost
+
+        // UI Generation
+        const colorPalette = document.getElementById('color-palette');
+        CONFIG.colors.forEach((c, index) => {
+            const btn = document.createElement('div');
+            btn.className = `color-btn ${index === 0 ? 'active' : ''}`;
+            btn.style.backgroundColor = '#' + c.hex.toString(16).padStart(6, '0');
+            btn.title = c.name;
+            btn.onclick = () => {
+                document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.color = c.hex;
+                updateGhost();
+            };
+            colorPalette.appendChild(btn);
+        });
+
+        const brickPalette = document.getElementById('brick-palette');
+        CONFIG.bricks.forEach((b, index) => {
+            const btn = document.createElement('div');
+            btn.className = `brick-btn ${index === 0 ? 'active' : ''}`;
+            btn.textContent = b.label;
+            btn.onclick = () => {
+                document.querySelectorAll('.brick-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                state.brickType = b;
+                updateGhost();
+            };
+            brickPalette.appendChild(btn);
+        });
+
+        document.getElementById('clear-btn').onclick = () => {
+            state.bricks.forEach(b => scene.remove(b));
+            state.bricks = [];
+        };
+
+        // Mouse Events
+        function onMouseMove(event) {
+            event.preventDefault();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            
+            // Intersect with baseplate and all placed bricks
+            const objects = [basePlate, ...state.bricks.map(b => b.children[0])]; // Raycast against bodies
+            const intersects = raycaster.intersectObjects(objects, true);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                const point = intersect.point;
+                const normal = intersect.face.normal;
+                
+                // Calculate grid position
+                // We want to align the center of the brick to the grid
+                // The grid lines are at multiples of unitSize.
+                // A 1x1 brick (10 units) center should be at 5, 15, 25...
+                
+                // Adjust point by normal to ensure we are "outside" the hit object
+                const pos = point.clone().add(normal.clone().multiplyScalar(0.1));
+                
+                // Snap to grid
+                const snap = CONFIG.unitSize;
+                
+                // Calculate center position based on brick dimensions
+                // If width is odd (1, 3), center is at 0.5 * unit
+                // If width is even (2, 4), center is at 0.0 * unit (on the line)
+                
+                const wUnits = state.brickType.w;
+                const dUnits = state.brickType.d;
+                
+                const xOffset = (wUnits % 2 === 0) ? 0 : snap / 2;
+                const zOffset = (dUnits % 2 === 0) ? 0 : snap / 2;
+                
+                const x = Math.round((pos.x - xOffset) / snap) * snap + xOffset;
+                const z = Math.round((pos.z - zOffset) / snap) * snap + zOffset;
+                
+                // Y position
+                // If hitting baseplate (y=-1), new y should be 0 (bottom of brick)
+                // If hitting another brick, new y should be top of that brick
+                
+                // We can just use the hit point y.
+                // If normal is up (0,1,0), we stack.
+                // If normal is side, we place adjacent? 
+                // For simplicity, let's enforce "stacking on top" or "placing on ground" primarily.
+                // But side placement is nice.
+                
+                // Let's use the snapped X/Z and find the correct Y.
+                // Actually, simply using the intersected object's position + height is safer for stacking.
+                
+                let y = 0;
+                
+                // Find the object we hit
+                let hitObject = intersect.object;
+                while(hitObject.parent && !hitObject.userData.isBrick && !hitObject.userData.isBaseplate) {
+                    hitObject = hitObject.parent;
+                }
+                
+                // If we hit the baseplate
+                if (hitObject.userData.isBaseplate) {
+                    y = 0;
+                } else if (hitObject.userData.isBrick) {
+                    // We hit a brick
+                    const brickData = hitObject.userData;
+                    // If we hit the top face
+                    if (normal.y > 0.5) {
+                        y = hitObject.position.y + brickData.h;
+                    } else {
+                        // Side placement logic is tricky with different sizes.
+                        // Let's stick to top-stacking or baseplate for MVP robustness.
+                        // Or, use the snapped point's Y.
+                        // If we hit the side, the snapped point might be at the same Y level.
+                        y = hitObject.position.y; 
+                        // But we need to check if we are overlapping.
+                    }
+                }
+
+                if (ghostBrick) {
+                    ghostBrick.position.set(x, y, z);
+                    
+                    // Rotate ghost if needed? (Maybe add rotation with 'R' key later)
+                    // For now, fixed orientation.
+                    
+                    ghostBrick.visible = true;
+                }
+            } else {
+                if (ghostBrick) ghostBrick.visible = false;
+            }
+        }
+
+        function onMouseDown(event) {
+            if (event.button === 0) { // Left click: Place
+                if (ghostBrick && ghostBrick.visible) {
+                    const newBrick = createBrickMesh(state.brickType.w, state.brickType.d, state.brickType.h, state.color);
+                    newBrick.position.copy(ghostBrick.position);
+                    scene.add(newBrick);
+                    state.bricks.push(newBrick);
+                    
+                    // Animation effect?
+                    newBrick.scale.set(0,0,0);
+                    let s = 0;
+                    const anim = () => {
+                        s += 0.1;
+                        if(s < 1) {
+                            newBrick.scale.set(s,s,s);
+                            requestAnimationFrame(anim);
+                        } else {
+                            newBrick.scale.set(1,1,1);
+                        }
+                    };
+                    anim();
+                }
+            } else if (event.button === 2) { // Right click: Remove
+                raycaster.setFromCamera(mouse, camera);
+                const objects = state.bricks.map(b => b.children[0]);
+                const intersects = raycaster.intersectObjects(objects);
+                
+                if (intersects.length > 0) {
+                    const hitObj = intersects[0].object;
+                    const brickGroup = hitObj.parent;
+                    
+                    scene.remove(brickGroup);
+                    state.bricks = state.bricks.filter(b => b !== brickGroup);
+                }
+            }
+        }
+
+        window.addEventListener('mousemove', onMouseMove);
+        window.addEventListener('mousedown', onMouseDown);
+        window.addEventListener('resize', () => {
+            const aspect = window.innerWidth / window.innerHeight;
+            camera.left = -d * aspect;
+            camera.right = d * aspect;
+            camera.top = d;
+            camera.bottom = -d;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Animation Loop
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+    </script>
+</body>
+</html>
