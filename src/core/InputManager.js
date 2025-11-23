@@ -14,6 +14,10 @@ export class InputManager {
         
         window.addEventListener('mousemove', this.onMouseMove.bind(this));
         window.addEventListener('mousedown', this.onMouseDown.bind(this));
+        window.addEventListener('mouseleave', () => {
+            this.resetHighlights();
+            if (this.ghostBrick) this.ghostBrick.visible = false;
+        });
         
         this.updateGhost();
     }
@@ -42,6 +46,12 @@ export class InputManager {
     }
 
     onMouseMove(event) {
+        if (event.target.closest('#ui-panel') || event.target.closest('.history-controls')) {
+            this.resetHighlights();
+            if (this.ghostBrick) this.ghostBrick.visible = false;
+            return;
+        }
+
         event.preventDefault();
         this.mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         this.mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
@@ -260,11 +270,8 @@ export class InputManager {
     resetHighlights() {
         STATE.bricks.forEach(b => {
             b.children.forEach(c => {
-                if (c.userData.originalEmissive) {
-                    c.material.emissive.copy(c.userData.originalEmissive);
-                } else {
-                    c.material.emissive.setHex(0x000000);
-                }
+                c.material.emissive.setHex(0x000000);
+                c.material.emissiveIntensity = 1;
             });
         });
     }
