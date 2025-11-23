@@ -6,8 +6,8 @@ export class SceneManager {
     constructor(containerId) {
         this.container = document.getElementById(containerId);
         this.scene = new THREE.Scene();
-        this.scene.background = new THREE.Color(0xf0f5f9);
-        this.scene.fog = new THREE.Fog(0xf0f5f9, 200, 1000);
+        this.scene.background = null; // Transparent to let CSS background show
+        // this.scene.fog = new THREE.Fog(0xf0f5f9, 200, 1000);
 
         const aspect = window.innerWidth / window.innerHeight;
         const d = 200;
@@ -58,9 +58,10 @@ export class SceneManager {
         this.baseGroup = new THREE.Group();
         this.scene.add(this.baseGroup);
 
+        const baseColor = 0x6AB04C; // Fresh Grass Green
         const baseSize = CONFIG.gridSize * CONFIG.unitSize;
         const baseGeo = new THREE.BoxGeometry(baseSize, 2, baseSize);
-        const baseMat = new THREE.MeshStandardMaterial({ color: 0x237841, roughness: 0.8 });
+        const baseMat = new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.8 });
         this.basePlate = new THREE.Mesh(baseGeo, baseMat);
         this.basePlate.position.y = -1;
         this.basePlate.receiveShadow = true;
@@ -68,7 +69,7 @@ export class SceneManager {
         this.baseGroup.add(this.basePlate);
 
         const studGeo = new THREE.CylinderGeometry(CONFIG.studRadius, CONFIG.studRadius, CONFIG.studHeight, 16);
-        const studMat = new THREE.MeshStandardMaterial({ color: 0x237841, roughness: 0.8 });
+        const studMat = new THREE.MeshStandardMaterial({ color: baseColor, roughness: 0.8 });
         const instancedStuds = new THREE.InstancedMesh(studGeo, studMat, CONFIG.gridSize * CONFIG.gridSize);
         instancedStuds.receiveShadow = true;
         instancedStuds.castShadow = true;
