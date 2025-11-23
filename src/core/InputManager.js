@@ -87,7 +87,10 @@ export class InputManager {
                 this.ghostBrick.position.set(x, y, z);
                 this.ghostBrick.visible = true;
 
-                if (this.checkCollision(this.ghostBrick.position)) {
+                const collision = this.checkCollision(this.ghostBrick.position);
+                const supported = this.checkSupport(this.ghostBrick.position);
+
+                if (collision || !supported) {
                     this.setGhostColor(0xFF4757, 0.8); // Super Red
                     this.isValidPlacement = false;
                 } else {
@@ -126,6 +129,48 @@ export class InputManager {
                 this.commandManager.execute(command);
             }
         }
+    }
+
+    checkSupport(position) {
+        const w = STATE.brickType.w * CONFIG.unitSize;
+        const d = STATE.brickType.d * CONFIG.unitSize;
+        
+        const minX = position.x - w / 2 + 0.1;
+        const maxX = position.x + w / 2 - 0.1;
+        const minZ = position.z - d / 2 + 0.1;
+        const maxZ = position.z + d / 2 - 0.1;
+
+        // Check Baseplate
+        if (Math.abs(position.y) < 0.1) {
+            const baseSize = CONFIG.gridSize * CONFIG.unitSize;
+            const halfBase = baseSize / 2;
+            return (minX >= -halfBase && maxX <= halfBase && 
+                    minZ >= -halfBase && maxZ <= halfBase);
+        }
+
+        // Check Bricks below
+        const supportY = position.y;
+        
+        for (const brick of STATE.bricks) {
+            const bData = brick.userData;
+            const bTopY = brick.position.y + bData.h;
+            
+            if (Math.abs(bTopY - supportY) < 0.1) {
+                const bW = bData.w * CONFIG.unitSize;
+                const bD = bData.d * CONFIG.unitSize;
+                
+                const bMinX = brick.position.x - bW / 2;
+                const bMaxX = brick.position.x + bW / 2;
+                const bMinZ = brick.position.z - bD / 2;
+                const bMaxZ = brick.position.z + bD / 2;
+
+                if (maxX > bMinX && minX < bMaxX &&
+                    maxZ > bMinZ && minZ < bMaxZ) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     checkCollision(position) {
