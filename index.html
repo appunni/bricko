@@ -37,7 +37,7 @@
         #ui-panel::-webkit-scrollbar-thumb { background-color: #FF6B6B; border-radius: 4px; }
         
         h1 { 
-            margin: 0 0 24px 0; 
+            margin: 0; 
             font-size: 32px; 
             font-weight: 700; 
             color: #FF6B6B; 
@@ -46,6 +46,51 @@
             gap: 12px; 
             text-shadow: 2px 2px 0px #FFE66D;
             letter-spacing: 1px;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        #minimize-btn {
+            background: #4ECDC4;
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 10px;
+            color: white;
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 700;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #2A8F88;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.1s;
+            padding-bottom: 4px; /* Center text visually */
+        }
+
+        #minimize-btn:hover {
+            background: #5CE5DC;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 0 #2A8F88;
+        }
+
+        #minimize-btn:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #2A8F88;
+        }
+
+        #ui-content {
+            transition: opacity 0.2s;
+        }
+
+        #ui-content.hidden {
+            display: none;
         }
 
         .preview-container {
@@ -134,21 +179,26 @@
 </head>
 <body>
     <div id="ui-panel">
-        <h1>🧱 Bricko</h1>
+        <div class="panel-header">
+            <h1>🧱 Bricko</h1>
+            <button id="minimize-btn" title="Toggle Panel">−</button>
+        </div>
         
-        <div class="preview-container" id="brick-preview"></div>
+        <div id="ui-content">
+            <div class="preview-container" id="brick-preview"></div>
 
-        <div class="control-group">
-            <label>Brick Type</label>
-            <select id="brick-select"></select>
+            <div class="control-group">
+                <label>Brick Type</label>
+                <select id="brick-select"></select>
+            </div>
+
+            <div class="control-group">
+                <label>Color</label>
+                <select id="color-select"></select>
+            </div>
+
+            <button id="clear-btn">Clear All Bricks</button>
         </div>
-
-        <div class="control-group">
-            <label>Color</label>
-            <select id="color-select"></select>
-        </div>
-
-        <button id="clear-btn">Clear All Bricks</button>
     </div>
     <div id="canvas-container"></div>
 

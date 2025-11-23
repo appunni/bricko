@@ -12,6 +12,15 @@ export class UIManager {
     }
 
     initUI() {
+        // Toggle Panel
+        const minimizeBtn = document.getElementById('minimize-btn');
+        const uiContent = document.getElementById('ui-content');
+        
+        minimizeBtn.addEventListener('click', () => {
+            uiContent.classList.toggle('hidden');
+            minimizeBtn.textContent = uiContent.classList.contains('hidden') ? '+' : '−';
+        });
+
         const colorSelect = document.getElementById('color-select');
         CONFIG.colors.forEach((c) => {
             const option = document.createElement('option');
