@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import { CONFIG, STATE } from '../config.js';
 import { BrickFactory } from '../components/BrickFactory.js';
+import { PlaceBrickCommand, RemoveBrickCommand } from './CommandManager.js';
 
 export class InputManager {
-    constructor(sceneManager) {
+    constructor(sceneManager, commandManager) {
         this.sceneManager = sceneManager;
+        this.commandManager = commandManager;
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.ghostBrick = null;
@@ -91,27 +93,16 @@ export class InputManager {
 
     onMouseDown(event) {
         // Check if click is on UI panel
-        if (event.target.closest('#ui-panel')) return;
+        if (event.target.closest('#ui-panel') || event.target.closest('.history-controls')) return;
 
         if (event.button === 0) { // Left click: Place
             if (this.ghostBrick && this.ghostBrick.visible) {
-                const newBrick = BrickFactory.createBrickMesh(STATE.brickType.w, STATE.brickType.d, STATE.brickType.h, STATE.color);
-                newBrick.position.copy(this.ghostBrick.position);
-                this.sceneManager.add(newBrick);
-                STATE.bricks.push(newBrick);
-                
-                newBrick.scale.set(0,0,0);
-                let s = 0;
-                const anim = () => {
-                    s += 0.1;
-                    if(s < 1) {
-                        newBrick.scale.set(s,s,s);
-                        requestAnimationFrame(anim);
-                    } else {
-                        newBrick.scale.set(1,1,1);
-                    }
-                };
-                anim();
+                const command = new PlaceBrickCommand(
+                    this.sceneManager,
+                    { ...STATE.brickType, color: STATE.color },
+                    this.ghostBrick.position
+                );
+                this.commandManager.execute(command);
             }
         } else if (event.button === 2) { // Right click: Remove
             this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
@@ -122,8 +113,8 @@ export class InputManager {
                 const hitObj = intersects[0].object;
                 const brickGroup = hitObj.parent;
                 
-                this.sceneManager.remove(brickGroup);
-                STATE.bricks = STATE.bricks.filter(b => b !== brickGroup);
+                const command = new RemoveBrickCommand(this.sceneManager, brickGroup);
+                this.commandManager.execute(command);
             }
         }
     }

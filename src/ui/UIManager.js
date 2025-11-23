@@ -3,12 +3,27 @@ import { CONFIG, STATE } from '../config.js';
 import { BrickFactory } from '../components/BrickFactory.js';
 
 export class UIManager {
-    constructor(inputManager, sceneManager) {
+    constructor(inputManager, sceneManager, commandManager) {
         this.inputManager = inputManager;
         this.sceneManager = sceneManager;
+        this.commandManager = commandManager;
         
         this.initUI();
         this.initPreview();
+        this.initHistoryControls();
+    }
+
+    initHistoryControls() {
+        const undoBtn = document.getElementById('undo-btn');
+        const redoBtn = document.getElementById('redo-btn');
+
+        undoBtn.addEventListener('click', () => this.commandManager.undo());
+        redoBtn.addEventListener('click', () => this.commandManager.redo());
+
+        window.addEventListener('historyChanged', (e) => {
+            undoBtn.disabled = !e.detail.canUndo;
+            redoBtn.disabled = !e.detail.canRedo;
+        });
     }
 
     initUI() {
