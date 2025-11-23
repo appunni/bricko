@@ -11,6 +11,24 @@ export class UIManager {
         this.initUI();
         this.initPreview();
         this.initHistoryControls();
+        this.initTools();
+    }
+
+    initTools() {
+        const hammerBtn = document.getElementById('hammer-btn');
+
+        hammerBtn.addEventListener('click', () => {
+            if (STATE.mode === 'build') {
+                STATE.mode = 'destroy';
+                hammerBtn.classList.add('active');
+                document.body.style.cursor = 'url("data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\' viewport=\'0 0 32 32\' style=\'fill:black;font-size:24px;\'><text y=\'50%\'>🔨</text></svg>") 16 16, auto';
+            } else {
+                STATE.mode = 'build';
+                hammerBtn.classList.remove('active');
+                document.body.style.cursor = 'default';
+            }
+            this.inputManager.updateGhost();
+        });
     }
 
     initHistoryControls() {

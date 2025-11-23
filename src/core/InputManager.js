@@ -23,6 +23,8 @@ export class InputManager {
             this.sceneManager.remove(this.ghostBrick);
             this.ghostBrick = null;
         }
+
+        if (STATE.mode === 'destroy') return;
         
         const mesh = BrickFactory.createBrickMesh(STATE.brickType.w, STATE.brickType.d, STATE.brickType.h, STATE.color);
         
@@ -46,6 +48,36 @@ export class InputManager {
 
         this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
         
+        if (STATE.mode === 'destroy') {
+            const objects = STATE.bricks.map(b => b.children[0]);
+            const intersects = this.raycaster.intersectObjects(objects);
+            
+            // Reset all emissive
+            STATE.bricks.forEach(b => {
+                b.children.forEach(c => {
+                    if (c.userData.originalEmissive) {
+                        c.material.emissive.copy(c.userData.originalEmissive);
+                    } else {
+                        c.material.emissive.setHex(0x000000);
+                    }
+                });
+            });
+
+            if (intersects.length > 0) {
+                const hitObj = intersects[0].object;
+                const brickGroup = hitObj.parent;
+                
+                brickGroup.children.forEach(c => {
+                    if (!c.userData.originalEmissive) {
+                        c.userData.originalEmissive = c.material.emissive.clone();
+                    }
+                    c.material.emissive.setHex(0xFF0000);
+                    c.material.emissiveIntensity = 0.5;
+                });
+            }
+            return;
+        }
+
         const objects = [this.sceneManager.basePlate, ...STATE.bricks.map(b => b.children[0])];
         const intersects = this.raycaster.intersectObjects(objects, true);
 
@@ -107,6 +139,23 @@ export class InputManager {
         // Check if click is on UI panel
         if (event.target.closest('#ui-panel') || event.target.closest('.history-controls')) return;
 
+        if (STATE.mode === 'destroy') {
+            if (event.button === 0) {
+                this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
+                const objects = STATE.bricks.map(b => b.children[0]);
+                const intersects = this.raycaster.intersectObjects(objects);
+                
+                if (intersects.length > 0) {
+                    const hitObj = intersects[0].object;
+                    const brickGroup = hitObj.parent;
+                    
+                    const command = new RemoveBrickCommand(this.sceneManager, brickGroup);
+                    this.commandManager.execute(command);
+                }
+            }
+            return;
+        }
+
         if (event.button === 0) { // Left click: Place
             if (this.ghostBrick && this.ghostBrick.visible && this.isValidPlacement) {
                 const command = new PlaceBrickCommand(
@@ -116,7 +165,7 @@ export class InputManager {
                 );
                 this.commandManager.execute(command);
             }
-        } else if (event.button === 2) { // Right click: Remove
+        } else if (event.button === 2) { // Right click: Remove (Legacy support)
             this.raycaster.setFromCamera(this.mouse, this.sceneManager.camera);
             const objects = STATE.bricks.map(b => b.children[0]);
             const intersects = this.raycaster.intersectObjects(objects);

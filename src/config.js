@@ -35,5 +35,6 @@ export const CONFIG = {
 export const STATE = {
     color: CONFIG.colors[0].hex,
     brickType: CONFIG.bricks[0],
-    bricks: [] // Array of mesh objects
+    bricks: [], // Array of mesh objects
+    mode: 'build' // 'build' or 'destroy'
 };

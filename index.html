@@ -140,6 +140,13 @@
             color: #ccc;
         }
 
+        .history-btn.active {
+            background: #FFE66D;
+            border-color: #FF6B6B;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 0 #FF6B6B;
+        }
+
         .preview-container {
             width: 100%;
             height: 200px;
@@ -250,14 +257,12 @@
     <div id="canvas-container"></div>
 
     <div class="history-controls">
+        <button id="hammer-btn" class="history-btn" title="Hammer Mode">🔨</button>
+        <div style="width: 12px;"></div> <!-- Spacer -->
         <button id="undo-btn" class="history-btn" title="Undo" disabled>↩</button>
         <button id="redo-btn" class="history-btn" title="Redo" disabled>↪</button>
     </div>
 
     <script type="module" src="/src/main.js"></script>
-</body>
-</html>
-
-    </script>
 </body>
 </html>
