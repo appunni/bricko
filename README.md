@@ -25,3 +25,7 @@ Play it here: **[https://appunni.github.io/bricko/](https://appunni.github.io/br
 1.  Clone the repo.
 2.  Run `npm install`.
 3.  Run `npm run dev`.
+
+## 🤖 Credits
+
+Created with the help of **GitHub Copilot** and **Gemini 3 Pro**.
