@@ -49,7 +49,7 @@ export class UIManager {
     initPreview() {
         const previewContainer = document.getElementById('brick-preview');
         this.previewScene = new THREE.Scene();
-        this.previewScene.background = new THREE.Color(0xf8f9fa);
+        this.previewScene.background = null; // Allow CSS background to show through
         
         this.previewCamera = new THREE.PerspectiveCamera(45, previewContainer.clientWidth / previewContainer.clientHeight, 0.1, 1000);
         this.previewCamera.position.set(20, 20, 20);
