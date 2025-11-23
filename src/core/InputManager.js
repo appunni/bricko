@@ -10,6 +10,7 @@ export class InputManager {
         this.raycaster = new THREE.Raycaster();
         this.mouse = new THREE.Vector2();
         this.ghostBrick = null;
+        this.isValidPlacement = true;
         
         window.addEventListener('mousemove', this.onMouseMove.bind(this));
         window.addEventListener('mousedown', this.onMouseDown.bind(this));
@@ -85,6 +86,14 @@ export class InputManager {
             if (this.ghostBrick) {
                 this.ghostBrick.position.set(x, y, z);
                 this.ghostBrick.visible = true;
+
+                if (this.checkCollision(this.ghostBrick.position)) {
+                    this.setGhostColor(0xFF4757, 0.8); // Super Red
+                    this.isValidPlacement = false;
+                } else {
+                    this.setGhostColor(STATE.color, 0.5);
+                    this.isValidPlacement = true;
+                }
             }
         } else {
             if (this.ghostBrick) this.ghostBrick.visible = false;
@@ -96,7 +105,7 @@ export class InputManager {
         if (event.target.closest('#ui-panel') || event.target.closest('.history-controls')) return;
 
         if (event.button === 0) { // Left click: Place
-            if (this.ghostBrick && this.ghostBrick.visible) {
+            if (this.ghostBrick && this.ghostBrick.visible && this.isValidPlacement) {
                 const command = new PlaceBrickCommand(
                     this.sceneManager,
                     { ...STATE.brickType, color: STATE.color },
@@ -117,5 +126,48 @@ export class InputManager {
                 this.commandManager.execute(command);
             }
         }
+    }
+
+    checkCollision(position) {
+        const w = STATE.brickType.w * CONFIG.unitSize;
+        const d = STATE.brickType.d * CONFIG.unitSize;
+        const h = STATE.brickType.h === 'brick' ? CONFIG.brickHeight : CONFIG.plateHeight;
+        
+        const minX = position.x - w / 2 + 0.1;
+        const maxX = position.x + w / 2 - 0.1;
+        const minY = position.y + 0.1;
+        const maxY = position.y + h - 0.1;
+        const minZ = position.z - d / 2 + 0.1;
+        const maxZ = position.z + d / 2 - 0.1;
+
+        for (const brick of STATE.bricks) {
+            const bPos = brick.position;
+            const bData = brick.userData;
+            const bW = bData.w * CONFIG.unitSize;
+            const bD = bData.d * CONFIG.unitSize;
+            const bH = bData.h;
+
+            const bMinX = bPos.x - bW / 2;
+            const bMaxX = bPos.x + bW / 2;
+            const bMinY = bPos.y;
+            const bMaxY = bPos.y + bH;
+            const bMinZ = bPos.z - bD / 2;
+            const bMaxZ = bPos.z + bD / 2;
+
+            if (maxX > bMinX && minX < bMaxX &&
+                maxY > bMinY && minY < bMaxY &&
+                maxZ > bMinZ && minZ < bMaxZ) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    setGhostColor(color, opacity = 0.5) {
+        if (!this.ghostBrick) return;
+        this.ghostBrick.children.forEach(c => {
+            c.material.emissive.setHex(color);
+            c.material.opacity = opacity;
+        });
     }
 }
