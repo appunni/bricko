@@ -53,15 +53,7 @@ export class InputManager {
             const intersects = this.raycaster.intersectObjects(objects);
             
             // Reset all emissive
-            STATE.bricks.forEach(b => {
-                b.children.forEach(c => {
-                    if (c.userData.originalEmissive) {
-                        c.material.emissive.copy(c.userData.originalEmissive);
-                    } else {
-                        c.material.emissive.setHex(0x000000);
-                    }
-                });
-            });
+            this.resetHighlights();
 
             if (intersects.length > 0) {
                 const hitObj = intersects[0].object;
@@ -262,6 +254,18 @@ export class InputManager {
         this.ghostBrick.children.forEach(c => {
             c.material.emissive.setHex(color);
             c.material.opacity = opacity;
+        });
+    }
+
+    resetHighlights() {
+        STATE.bricks.forEach(b => {
+            b.children.forEach(c => {
+                if (c.userData.originalEmissive) {
+                    c.material.emissive.copy(c.userData.originalEmissive);
+                } else {
+                    c.material.emissive.setHex(0x000000);
+                }
+            });
         });
     }
 }

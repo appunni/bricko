@@ -26,6 +26,7 @@ export class UIManager {
                 STATE.mode = 'build';
                 hammerBtn.classList.remove('active');
                 document.body.style.cursor = 'default';
+                this.inputManager.resetHighlights();
             }
             this.inputManager.updateGhost();
         });
