@@ -6,18 +6,18 @@ export const CONFIG = {
     studRadius: 2.4,
     studHeight: 1.6,
     colors: [
-        { name: 'Red', hex: 0xC91A09 },
-        { name: 'Blue', hex: 0x0055BF },
-        { name: 'Yellow', hex: 0xF2CD37 },
-        { name: 'Green', hex: 0x237841 },
-        { name: 'White', hex: 0xFFFFFF },
-        { name: 'Black', hex: 0x05131D },
-        { name: 'Orange', hex: 0xFE8A18 },
-        { name: 'Lime', hex: 0xBBE90B },
-        { name: 'Dark Blue', hex: 0x0A3463 },
-        { name: 'Bright Lt Yellow', hex: 0xF8F184 }, // Cool Yellow
-        { name: 'Tan', hex: 0xE4CD9E },
-        { name: 'Dark Tan', hex: 0x958A73 }
+        { name: 'Super Red', hex: 0xFF4757 },
+        { name: 'Ocean Blue', hex: 0x1E90FF },
+        { name: 'Sunshine Yellow', hex: 0xFFD32A },
+        { name: 'Slime Green', hex: 0x2ED573 },
+        { name: 'Bubblegum Pink', hex: 0xFF6B81 },
+        { name: 'Grape Purple', hex: 0x8E44AD },
+        { name: 'Tiger Orange', hex: 0xFFA502 },
+        { name: 'Sky Blue', hex: 0x70A1FF },
+        { name: 'Snow White', hex: 0xFFFFFF },
+        { name: 'Midnight Black', hex: 0x2F3542 },
+        { name: 'Chocolate', hex: 0x8D6E63 },
+        { name: 'Gold', hex: 0xE1B12C }
     ],
     bricks: [
         { label: '1x1 Brick', w: 1, d: 1, h: 'brick' },
